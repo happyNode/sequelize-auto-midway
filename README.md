@@ -17,8 +17,6 @@ npm i sequelize-auto-midway
 ```shell
 # 推荐
 # 请替换配置信息
-npx mdl-gen-midway -h localhost -p 3306 -d yourdbname -u root -x yourpassword -e mysql --noConfig --case-property none
-
 npx sequelize-auto-midway -h localhost -d yourDBname -u root -x yourPassword -p 13306  --dialect mysql -o ./models -t task --noInitModels true --caseModel c --caseProp c --caseFile c --indentation 1
 ```
 
