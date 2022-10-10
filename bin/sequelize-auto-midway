@@ -9,7 +9,7 @@ const argv = require('yargs')
     "parse-numbers": false // disabled because of password field, other option can still be explicitly defined as number type
   })
   .usage(
-    'Usage: sequelize-auto -h <host> -d <database> -u <user> -x [password] -p [port]  --dialect [dialect] -c [/path/to/config] -o [/path/to/models] -t [tableName]'
+    'Usage: sequelize-auto-midway -h <host> -d <database> -u <user> -x [password] -p [port]  --dialect [dialect] -c [/path/to/config] -o [/path/to/models] -t [tableName]'
   )
   .option('host', {
     description: 'IP/Hostname for the database.',
