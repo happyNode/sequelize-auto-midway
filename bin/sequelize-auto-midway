@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const SequelizeAuto = require('../types');
+const SequelizeAuto = require('../');
 const path = require('path');
 const readline = require('readline');
 const _ = require('lodash');
