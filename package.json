@@ -43,7 +43,7 @@
     "tsc": "tsc",
     "clean": "rimraf lib && rimraf types && rimraf **/models && rimraf *.tgz",
     "build": "npm run clean && tsc",
-    "prepack": "crlf --set=LF bin/sequelize-auto",
+    "prepack": "crlf --set=LF bin/sequelize-auto-midway",
     "test": "npm run test-mssql && npm run test-mysql && npm run test-postgres && npm run test-sqlite",
     "test-postgres": "cross-env DEBUG='sequelize-auto:*' DIALECT=postgres nyc mocha",
     "test-postgres-native": "cross-env DEBUG='sequelize-auto:*' DIALECT=postgres-native nyc mocha",
