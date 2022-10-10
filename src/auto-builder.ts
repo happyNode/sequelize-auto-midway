@@ -29,7 +29,6 @@ export class AutoBuilder {
   }
 
   build(): Promise<TableData> {
-
     let prom: Promise<any[]>;
     if (this.dialect.showTablesQuery) {
       const showTablesSql = this.dialect.showTablesQuery(this.schema);
@@ -54,7 +53,7 @@ export class AutoBuilder {
   }
 
   private processTables(tableResult: any[]) {
-    // tables is an array of either three things:
+    // Tables是由以下三种成的数组:
     // * objects with two properties table_name and table_schema
     // * objects with two properties tableName and tableSchema
     // * objects with a single name property

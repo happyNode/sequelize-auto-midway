@@ -28,6 +28,7 @@ export class SequelizeAuto {
     if (database instanceof Sequelize) {
       this.sequelize = database;
     } else {
+      // 初始化 sequelize 对象
       this.sequelize = new Sequelize(database, username, password, options || {});
     }
 
@@ -47,6 +48,7 @@ export class SequelizeAuto {
 
   }
 
+  // 指令执行
   async run(): Promise<TableData> {
     let td = await this.build();
     td = this.relate(td);
