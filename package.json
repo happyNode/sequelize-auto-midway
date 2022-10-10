@@ -1,6 +1,6 @@
 {
   "name": "sequelize-auto-midway",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publishConfig": {
     "tag": "latest"
   },
