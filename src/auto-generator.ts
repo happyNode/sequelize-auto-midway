@@ -40,39 +40,7 @@ export class AutoGenerator {
   }
 
   makeHeaderTemplate() {
-    let header = "";
-    const sp = this.space[1];
-
-    if (this.options.lang === 'ts') {
-      header += "import * as Sequelize from 'sequelize';\n";
-      header += "import { DataTypes, Model, Optional } from 'sequelize';\n";
-    } else if (this.options.lang === 'es6') {
-      header += "const Sequelize = require('sequelize');\n";
-      header += "module.exports = (sequelize, DataTypes) => {\n";
-      header += sp + "return #TABLE#.init(sequelize, DataTypes);\n";
-      header += "}\n\n";
-      header += "class #TABLE# extends Sequelize.Model {\n";
-      header += sp + "static init(sequelize, DataTypes) {\n";
-      if (this.options.useDefine) {
-        header += sp + "return sequelize.define('#TABLE#', {\n";
-      } else {
-        header += sp + "return super.init({\n";
-      }
-    } else if (this.options.lang === 'esm') {
-      header += "import _sequelize from 'sequelize';\n";
-      header += "const { Model, Sequelize } = _sequelize;\n\n";
-      header += "export default class #TABLE# extends Model {\n";
-      header += sp + "static init(sequelize, DataTypes) {\n";
-      if (this.options.useDefine) {
-        header += sp + "return sequelize.define('#TABLE#', {\n";
-      } else {
-        header += sp + "return super.init({\n";
-      }
-    } else {
-      header += "const Sequelize = require('sequelize');\n";
-      header += "module.exports = function(sequelize, DataTypes) {\n";
-      header += sp + "return sequelize.define('#TABLE#', {\n";
-    }
+    const header = "import { Column, DataType, Table, Model } from 'sequelize-typescript';\n\n";
     return header;
   }
 
@@ -89,69 +57,8 @@ export class AutoGenerator {
       const [schemaName, tableNameOrig] = qNameSplit(table);
       const tableName = makeTableName(this.options.caseModel, tableNameOrig, this.options.singularize, this.options.lang);
 
-      if (this.options.lang === 'ts') {
-        const associations = this.addTypeScriptAssociationMixins(table);
-        const needed = _.keys(associations.needed).sort();
-        needed.forEach(fkTable => {
-          const set = associations.needed[fkTable];
-          const [fkSchema, fkTableName] = qNameSplit(fkTable);
-          const filename = recase(this.options.caseFile, fkTableName, this.options.singularize);
-          str += 'import type { ';
-          str += Array.from(set.values()).sort().join(', ');
-          str += ` } from './${filename}';\n`;
-        });
-
-        str += "\nexport interface #TABLE#Attributes {\n";
-        str += this.addTypeScriptFields(table, true) + "}\n\n";
-
-        const primaryKeys = this.getTypeScriptPrimaryKeys(table);
-
-        if (primaryKeys.length) {
-          str += `export type #TABLE#Pk = ${primaryKeys.map((k) => `"${recase(this.options.caseProp, k)}"`).join(' | ')};\n`;
-          str += `export type #TABLE#Id = #TABLE#[#TABLE#Pk];\n`;
-        }
-
-        const creationOptionalFields = this.getTypeScriptCreationOptionalFields(table);
-
-        if (creationOptionalFields.length) {
-          str += `export type #TABLE#OptionalAttributes = ${creationOptionalFields.map((k) => `"${recase(this.options.caseProp, k)}"`).join(' | ')};\n`;
-          str += "export type #TABLE#CreationAttributes = Optional<#TABLE#Attributes, #TABLE#OptionalAttributes>;\n\n";
-        } else {
-          str += "export type #TABLE#CreationAttributes = #TABLE#Attributes;\n\n";
-        }
-
-        str += "export class #TABLE# extends Model<#TABLE#Attributes, #TABLE#CreationAttributes> implements #TABLE#Attributes {\n";
-        str += this.addTypeScriptFields(table, false);
-        str += "\n" + associations.str;
-        str += "\n" + this.space[1] + "static initModel(sequelize: Sequelize.Sequelize): typeof #TABLE# {\n";
-
-        if (this.options.useDefine) {
-          str += this.space[2] + "return sequelize.define('#TABLE#', {\n";
-
-        } else {
-          str += this.space[2] + "return #TABLE#.init({\n";
-        }
-      }
-
-      str += this.addTable(table);
-
-      const lang = this.options.lang;
-      if (lang === 'ts' && this.options.useDefine) {
-        str += ") as typeof #TABLE#;\n";
-      } else {
-        str += ");\n";
-      }
-
-      if (lang === 'es6' || lang === 'esm' || lang === 'ts') {
-        if (this.options.useDefine) {
-          str += this.space[1] + "}\n}\n";
-        } else {
-          // str += this.space[1] + "return #TABLE#;\n";
-          str += this.space[1] + "}\n}\n";
-        }
-      } else {
-        str += "};\n";
-      }
+      // 为表的模型创建一个字符串
+      str += this.addTable(table).trim();
 
       const re = new RegExp('#TABLE#', 'g');
       str = str.replace(re, tableName);
@@ -162,36 +69,15 @@ export class AutoGenerator {
     return text;
   }
 
-  // 为表的模型创建一个字符串
   private addTable(table: string) {
-
     const [schemaName, tableNameOrig] = qNameSplit(table);
     const space = this.space;
     let timestamps = (this.options.additional && this.options.additional.timestamps === true) || false;
     let paranoid = (this.options.additional && this.options.additional.paranoid === true) || false;
 
-    // 添加表全部的字段
-    let str = '';
-    const fields = _.keys(this.tables[table]);
-    fields.forEach((field, index) => {
-      // 判断是否为 created_at 和 updated_at 字段
-      timestamps ||= this.isTimestampField(field);
-      // 判断是否为 deleted_at 字段
-      paranoid ||= this.isParanoidField(field);
-      // 添加字段属性
-      str += this.addField(table, field);
-    });
-
-    // 移除最后的 ",\n"
-    str = str.substring(0, str.length - 2) + "\n";
-
-    // 添加表的配置
-    str += space[1] + "}, {\n";
-    if (!this.options.useDefine) {
-      str += space[2] + "sequelize,\n";
-    }
+    // 为表全部的字段生成字符串
+    let str = '@Table({\n';
     str += space[2] + "tableName: '" + tableNameOrig + "',\n";
-
     if (schemaName && this.dialect.hasSchema) {
       str += space[2] + "schema: '" + schemaName + "',\n";
     }
@@ -224,21 +110,38 @@ export class AutoGenerator {
       });
     }
 
-    // 添加索引
     if (!this.options.noIndexes) {
+      // 添加索引
       str += this.addIndexes(table);
     }
 
     str = space[2] + str.trim();
     str = str.substring(0, str.length - 1);
-    str += "\n" + space[1] + "}";
+    str += "\n})\n";
+
+    const characters = [...<string>tableNameOrig];
+		characters[0] = characters[0].toUpperCase();
+		const entityName = characters.join("");
+
+    str += `export class ${entityName}Entity extends Model {\n`
+
+    const fields = _.keys(this.tables[table]);
+    fields.forEach((field, index) => {
+      // 判断是否为 created_at 和 updated_at 字段
+      timestamps ||= this.isTimestampField(field);
+      // 判断是否为 deleted_at 字段
+      paranoid ||= this.isParanoidField(field);
+      // 创建一个包含字段属性(类型、defaultValue等)的字符串
+      str += this.addField(table, field);
+    });
+
+    // 移除最后的 ",\n"
+    str = str.substring(0, str.length - 2) + "\n}";
 
     return str;
   }
 
-  // 创建一个包含字段属性(类型、defaultValue等)的字符串
   private addField(table: string, field: string): string {
-
     // 忽略 Sequelize 标准字段
     const additional = this.options.additional;
     if (additional && (additional.timestamps !== false) && (this.isTimestampField(field) || this.isParanoidField(field))) {
@@ -259,7 +162,7 @@ export class AutoGenerator {
     }
 
     const fieldName = recase(this.options.caseProp, field);
-    let str = this.quoteName(fieldName) + ": {\n";
+    let str = "@Column({\n";
 
     const quoteWrapper = '"';
 
@@ -363,7 +266,7 @@ export class AutoGenerator {
             val_text = defaultVal;
 
           } else if (field_type === 'uuid' && (defaultVal === 'gen_random_uuid()' || defaultVal === 'uuid_generate_v4()')) {
-            val_text = "DataTypes.UUIDV4";
+            val_text = "DataType.UUIDV4";
 
           } else if (defaultVal.match(/\w+\(\)$/)) {
             // replace db function with sequelize function
@@ -394,11 +297,6 @@ export class AutoGenerator {
           }
         }
 
-        // val_text = _.isString(val_text) && !val_text.match(/^sequelize\.[^(]+\(.*\)$/)
-        // ? self.sequelize.escape(_.trim(val_text, '"'), null, self.options.dialect)
-        // : val_text;
-        // don't prepend N for MSSQL when building models...
-        // defaultVal = _.trimStart(defaultVal, 'N');
 
         str += space[3] + attr + ": " + val_text;
 
@@ -427,10 +325,13 @@ export class AutoGenerator {
 
     // 删除属性选项中的最后一个“，”
     str = str.trim().replace(/,+$/, '') + "\n";
-    str = space[2] + str + space[2] + "},\n";
+    str = space[2] + str + space[2] + "})\n";
+    str += space[2] + this.quoteName(fieldName) + ": number;\n\n";
+
     return str;
   }
 
+  // 添加索引
   private addIndexes(table: string) {
     const indexes = this.indexes[table];
     const space = this.space;
@@ -474,8 +375,10 @@ export class AutoGenerator {
     return str;
   }
 
+
   /** Get the sequelize type from the Field */
   private getSqType(fieldObj: Field, attr: string): string {
+    let typeStr = '';
     const attrValue = (fieldObj as any)[attr];
     if (!attrValue.toLowerCase) {
       console.log("attrValue", attr, attrValue);
@@ -488,23 +391,23 @@ export class AutoGenerator {
     let typematch = null;
 
     if (type === "boolean" || type === "bit(1)" || type === "bit" || type === "tinyint(1)") {
-      val = 'DataTypes.BOOLEAN';
+      val = 'DataType.BOOLEAN';
 
     // postgres range types
     } else if (type === "numrange") {
-      val = 'DataTypes.RANGE(DataTypes.DECIMAL)';
+      val = 'DataType.RANGE(DataType.DECIMAL)';
     } else if (type === "int4range") {
-      val = 'DataTypes.RANGE(DataTypes.INTEGER)';
+      val = 'DataType.RANGE(DataType.INTEGER)';
     } else if (type === "int8range") {
-      val = 'DataTypes.RANGE(DataTypes.BIGINT)';
+      val = 'DataType.RANGE(DataType.BIGINT)';
     } else if (type === "daterange") {
-      val = 'DataTypes.RANGE(DataTypes.DATEONLY)';
+      val = 'DataType.RANGE(DataType.DATEONLY)';
     } else if (type === "tsrange" || type === "tstzrange") {
-      val = 'DataTypes.RANGE(DataTypes.DATE)';
+      val = 'DataType.RANGE(DataType.DATE)';
 
     } else if (typematch = type.match(/^(bigint|smallint|mediumint|tinyint|int)/)) {
       // integer subtypes
-      val = 'DataTypes.' + (typematch[0] === 'int' ? 'INTEGER' : typematch[0].toUpperCase());
+      val = 'DataType.' + (typematch[0] === 'int' ? 'INTEGER' : typematch[0].toUpperCase());
       if (/unsigned/i.test(type)) {
         val += '.UNSIGNED';
       }
@@ -512,61 +415,61 @@ export class AutoGenerator {
         val += '.ZEROFILL';
       }
     } else if (type === 'nvarchar(max)' || type === 'varchar(max)') {
-        val = 'DataTypes.TEXT';
+        val = 'DataType.TEXT';
     } else if (type.match(/n?varchar|string|varying/)) {
-      val = 'DataTypes.STRING' + (!_.isNull(length) ? length : '');
+      val = 'DataType.STRING' + (!_.isNull(length) ? length : '');
     } else if (type.match(/^n?char/)) {
-      val = 'DataTypes.CHAR' + (!_.isNull(length) ? length : '');
+      val = 'DataType.CHAR' + (!_.isNull(length) ? length : '');
     } else if (type.match(/^real/)) {
-      val = 'DataTypes.REAL';
+      val = 'DataType.REAL';
     } else if (type.match(/text$/)) {
-      val = 'DataTypes.TEXT' + (!_.isNull(length) ? length : '');
+      val = 'DataType.TEXT' + (!_.isNull(length) ? length : '');
     } else if (type === "date") {
-      val = 'DataTypes.DATEONLY';
+      val = 'DataType.DATEONLY';
     } else if (type.match(/^(date|timestamp|year)/)) {
-      val = 'DataTypes.DATE' + (!_.isNull(length) ? length : '');
+      val = 'DataType.DATE' + (!_.isNull(length) ? length : '');
     } else if (type.match(/^(time)/)) {
-      val = 'DataTypes.TIME';
+      val = 'DataType.TIME';
     } else if (type.match(/^(float|float4)/)) {
-      val = 'DataTypes.FLOAT' + (!_.isNull(precision) ? precision : '');
+      val = 'DataType.FLOAT' + (!_.isNull(precision) ? precision : '');
     } else if (type.match(/^(decimal|numeric)/)) {
-      val = 'DataTypes.DECIMAL' + (!_.isNull(precision) ? precision : '');
+      val = 'DataType.DECIMAL' + (!_.isNull(precision) ? precision : '');
     } else if (type.match(/^money/)) {
-      val = 'DataTypes.DECIMAL(19,4)';
+      val = 'DataType.DECIMAL(19,4)';
     } else if (type.match(/^smallmoney/)) {
-      val = 'DataTypes.DECIMAL(10,4)';
+      val = 'DataType.DECIMAL(10,4)';
     } else if (type.match(/^(float8|double)/)) {
-      val = 'DataTypes.DOUBLE' + (!_.isNull(precision) ? precision : '');
+      val = 'DataType.DOUBLE' + (!_.isNull(precision) ? precision : '');
     } else if (type.match(/^uuid|uniqueidentifier/)) {
-      val = 'DataTypes.UUID';
+      val = 'DataType.UUID';
     } else if (type.match(/^jsonb/)) {
-      val = 'DataTypes.JSONB';
+      val = 'DataType.JSONB';
     } else if (type.match(/^json/)) {
-      val = 'DataTypes.JSON';
+      val = 'DataType.JSON';
     } else if (type.match(/^geometry/)) {
       const gtype = fieldObj.elementType ? `(${fieldObj.elementType})` : '';
-      val = `DataTypes.GEOMETRY${gtype}`;
+      val = `DataType.GEOMETRY${gtype}`;
     } else if (type.match(/^geography/)) {
       const gtype = fieldObj.elementType ? `(${fieldObj.elementType})` : '';
-      val = `DataTypes.GEOGRAPHY${gtype}`;
+      val = `DataType.GEOGRAPHY${gtype}`;
     } else if (type.match(/^array/)) {
       const eltype = this.getSqType(fieldObj, "elementType");
-      val = `DataTypes.ARRAY(${eltype})`;
+      val = `DataType.ARRAY(${eltype})`;
     } else if (type.match(/(binary|image|blob|bytea)/)) {
-      val = 'DataTypes.BLOB';
+      val = 'DataType.BLOB';
     } else if (type.match(/^hstore/)) {
-      val = 'DataTypes.HSTORE';
+      val = 'DataType.HSTORE';
     } else if (type.match(/^inet/)) {
-      val = 'DataTypes.INET';
+      val = 'DataType.INET';
     } else if (type.match(/^cidr/)) {
-      val = 'DataTypes.CIDR';
+      val = 'DataType.CIDR';
     } else if (type.match(/^oid/)) {
-      val = 'DataTypes.INTEGER';
+      val = 'DataType.INTEGER';
     } else if (type.match(/^macaddr/)) {
-      val = 'DataTypes.MACADDR';
+      val = 'DataType.MACADDR';
     } else if (type.match(/^enum(\(.*\))?$/)) {
       const enumValues = this.getEnumValues(fieldObj);
-      val = `DataTypes.ENUM(${enumValues})`;
+      val = `DataType.ENUM(${enumValues})`;
     }
 
     return val as string;

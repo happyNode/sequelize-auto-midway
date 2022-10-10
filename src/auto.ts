@@ -13,6 +13,7 @@ export class SequelizeAuto {
   options: AutoOptions;
 
   constructor(database: string | Sequelize, username: string, password: string, options: AutoOptions) {
+    // 针对 sqlite 和 mssql 单独进行参数配置
     if (options && options.dialect === 'sqlite' && !options.storage && database) {
       options.storage = database as string;
     }
@@ -32,14 +33,15 @@ export class SequelizeAuto {
       this.sequelize = new Sequelize(database, username, password, options || {});
     }
 
+    // 属性继承
     this.options = _.extend({
       spaces: true,
       indentation: 2,
       directory: './models',
       additional: {},
       host: 'localhost',
-      port: this.getDefaultPort(options.dialect),
-      closeConnectionAutomatically: true
+      port: this.getDefaultPort(options.dialect), // 根据不同的数据库获取默认端口
+      closeConnectionAutomatically: true // 关闭自动连接
     }, options || {});
 
     if (!this.options.directory) {

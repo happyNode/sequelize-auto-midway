@@ -6,7 +6,7 @@ import { FKSpec, TableData } from ".";
 import { AutoOptions, CaseFileOption, CaseOption, LangOption, makeIndent, makeTableName, pluralize, qNameSplit, recase, Relation } from "./types";
 const mkdirp = require('mkdirp');
 
-/** Writes text into files from TableData.text, and writes init-models */
+// 将文本从TableData写入文件。文本，并编写初始化模型
 export class AutoWriter {
   tableText: { [name: string]: string };
   foreignKeys: { [tableName: string]: { [fieldName: string]: FKSpec } };
@@ -59,28 +59,10 @@ export class AutoWriter {
       return tableName as string;
     }).sort();
 
-    // write the init-models file
-    if (!this.options.noInitModels) {
-      const initString = this.createInitString(tableNames, assoc, this.options.lang);
-      const initFilePath = path.join(this.options.directory, "init-models" + (isTypeScript ? '.ts' : '.js'));
-      const writeFile = util.promisify(fs.writeFile);
-      const initPromise = writeFile(path.resolve(initFilePath), initString);
-      promises.push(initPromise);
-    }
-
     return Promise.all(promises);
   }
   private createInitString(tableNames: string[], assoc: string, lang?: string) {
-    switch (lang) {
-      case 'ts':
-        return this.createTsInitString(tableNames, assoc);
-      case 'esm':
-        return this.createESMInitString(tableNames, assoc);
-      case 'es6':
-          return this.createES5InitString(tableNames, assoc, "const");
-      default:
-        return this.createES5InitString(tableNames, assoc, "var");
-    }
+    return this.createTsInitString(tableNames, assoc);
   }
   private createFile(table: string) {
     // FIXME: schema is not used to write the file name and there could be collisions. For now it
@@ -88,7 +70,7 @@ export class AutoWriter {
     // folders for each different schema.
     const [schemaName, tableName] = qNameSplit(table);
     const fileName = recase(this.options.caseFile, tableName, this.options.singularize);
-    const filePath = path.join(this.options.directory, fileName + (this.options.lang === 'ts' ? '.ts' : '.js'));
+    const filePath = path.join(this.options.directory, fileName + '.ts');
 
     const writeFile = util.promisify(fs.writeFile);
     return writeFile(path.resolve(filePath), this.tableText[table]);

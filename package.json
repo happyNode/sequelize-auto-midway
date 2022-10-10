@@ -91,6 +91,7 @@
     "pg-hstore": "^2.3.3",
     "rimraf": "^3.0.2",
     "sequelize": "^6.11",
+    "sequelize-typescript": "^2.1.3",
     "sqlite3": "5.0.2",
     "tedious": "^11.0.6",
     "typescript": "^4.2.3"
