@@ -48,7 +48,7 @@ export class AutoGenerator {
   generateText() {
     const tableNames = _.keys(this.tables);
 
-    // 生产头部文件模板
+    // 创建通用文件头部内容
     const header = this.makeHeaderTemplate();
 
     const text: { [name: string]: string; } = {};
@@ -175,6 +175,7 @@ export class AutoGenerator {
     const space = this.space;
 
     // 列的属性
+    let typeStr;
     const fieldAttrs = _.keys(fieldObj);
     fieldAttrs.forEach(attr => {
       // 我们不需要来自postgresql的特殊属性; "unique"被单独处理
@@ -303,7 +304,13 @@ export class AutoGenerator {
       } else if (attr === "comment" && (!fieldObj[attr] || this.dialect.name === "mssql")) { // 有备注
         return true;
       } else {
-        let val = (attr !== "type") ? null : this.getSqType(fieldObj, attr);
+        let val = null;
+        if(attr === "type"){
+          val = this.getSqType(fieldObj, attr);
+          typeStr = this.getFieldType(fieldObj, attr)
+          console.log('typeStr',typeStr, fieldName, attr)
+        }
+
         if (val == null) {
           val = (fieldObj as any)[attr];
           val = _.isString(val) ? quoteWrapper + this.escapeSpecial(val) + quoteWrapper : val;
@@ -326,7 +333,7 @@ export class AutoGenerator {
     // 删除属性选项中的最后一个“，”
     str = str.trim().replace(/,+$/, '') + "\n";
     str = space[2] + str + space[2] + "})\n";
-    str += space[2] + this.quoteName(fieldName) + ": number;\n\n";
+    str += space[2] + this.quoteName(fieldName) + `: ${typeStr};\n\n`;
 
     return str;
   }
@@ -375,8 +382,56 @@ export class AutoGenerator {
     return str;
   }
 
+  private getFieldType(fieldObj: Field, attr: string): string {
+    let typeStr = 'number';
+    const attrValue = (fieldObj as any)[attr];
+    if (!attrValue.toLowerCase) {
+      console.log("attrValue", attr, attrValue);
+      return attrValue;
+    }
+    const type: string = attrValue.toLowerCase();
 
-  /** Get the sequelize type from the Field */
+    let typematch = null;
+    if (type === "boolean" || type === "bit(1)" || type === "bit" || type === "tinyint(1)") {
+      typeStr = 'boolean';
+    } else if (typematch = type.match(/^(bigint|smallint|mediumint|tinyint|int)/)) {
+      typeStr = 'number';
+    } else if (type === 'nvarchar(max)' || type === 'varchar(max)') {
+      typeStr = 'string';
+    } else if (type.match(/n?varchar|string|varying/)) {
+      typeStr = 'string';
+    } else if (type.match(/^n?char/)) {
+      typeStr = 'string';
+    } else if (type.match(/text$/)) {
+      typeStr = 'string';
+    } else if (type === "date") {
+      typeStr = 'string';
+    } else if (type.match(/^(date|timestamp|year)/)) {
+      typeStr = 'string';
+    } else if (type.match(/^(time)/)) {
+      typeStr = 'string';
+    } else if (type.match(/^(float|float4)/)) {
+      typeStr = 'number';
+    } else if (type.match(/^(decimal|numeric)/)) {
+      typeStr = 'number';
+    } else if (type.match(/^money/)) {
+      typeStr = 'number';
+    } else if (type.match(/^smallmoney/)) {
+      typeStr = 'number';
+    } else if (type.match(/^(float8|double)/)) {
+      typeStr = 'number';
+    } else if (type.match(/^uuid|uniqueidentifier/)) {
+      typeStr = 'string';
+    } else if (type.match(/^jsonb/)) {
+      typeStr = 'string';
+    } else if (type.match(/^json/)) {
+      typeStr = 'string';
+    }
+
+    return typeStr;
+  }
+
+  // 从字段中获取sequelize类型
   private getSqType(fieldObj: Field, attr: string): string {
     let typeStr = '';
     const attrValue = (fieldObj as any)[attr];
