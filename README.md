@@ -200,3 +200,8 @@ Options:
 --singularize, --sg      Singularize model and file names from plural table
                           names
 ```
+
+# 贡献
+<a href="https://github.com/happyNode/sequelize-auto-midway/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=happyNode/sequelize-auto-midway" />
+</a>
