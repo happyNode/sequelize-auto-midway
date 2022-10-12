@@ -1,10 +1,10 @@
 {
   "name": "sequelize-auto-midway",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "publishConfig": {
     "tag": "latest"
   },
-  "description": "Automatically generate bare sequelize models from your database.",
+  "description": "Automatically generate bare midway sequelize models from your database.",
   "main": "index.js",
   "types": "types",
   "keywords": [
@@ -29,10 +29,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ddzyan/sequelize-auto-midway.git"
+    "url": "https://github.com/happyNode/sequelize-auto-midway.git"
   },
   "bugs": {
-    "url": "https://github.com/ddzyan/sequelize-auto-midway/issues"
+    "url": "https://github.com/happyNode/sequelize-auto-midway/issues"
   },
   "nyc": {
     "exclude": [
@@ -55,7 +55,7 @@
   "engines": {
     "node": ">= 10"
   },
-  "author": "dingdongzhao (https://github.com/nodejh/sequelize-automate)",
+  "author": "dingdongzhao (https://github.com/ddzyan)",
   "license": "MIT",
   "dependencies": {
     "lodash": "^4.17.21",
