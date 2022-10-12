@@ -1,0 +1,10 @@
+import { Column, DataType, Table, Model } from 'sequelize-typescript';
+
+@Table({
+  modelName: <%= modelName %>,
+  timestamps: <%= timestamp %>,
+  paranoid: <%= paranoid %>,
+})
+export class <%= caseModel %>Entity extends Model {
+  <%= column %>
+}

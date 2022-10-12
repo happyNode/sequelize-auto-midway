@@ -1,0 +1,36 @@
+
+language: node_js
+
+sudo: false
+
+node_js:
+  - "10"
+
+cache:
+  directories:
+    - node_modules
+
+services:
+  - postgresql
+  - mysql
+
+before_script:
+  - "npm install -g sqlite3"
+  - "npm install -g mysql2"
+  - "npm install pg pg-hstore"
+  - "mysql -e 'create database sequelize_auto_test;'"
+  - "psql -c 'create database sequelize_auto_test;' -U postgres"
+
+script:
+  - "npm run build"
+  - "npm run test-sqlite"
+  - "npm run test-postgres"
+  - "npm run test-mysql"
+
+env:
+  >
+  SQLITE_HOST=localhost SQLITE_USER=sequelize_auto 
+  POSTGRES_NAME=sequelize_auto_test POSTGRES_USER=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432
+  MYSQL_NAME=sequelize_auto_test MYSQL_USER=travis MYSQL_HOST=localhost MYSQL_PORT=3306
+
+after_success: npm run coveralls
